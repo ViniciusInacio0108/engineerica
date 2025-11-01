@@ -207,6 +207,7 @@ class _TaskListViewState extends State<_TaskListView> {
                   ),
                   child: const Text('Add task'),
                 ),
+                const SizedBox(height: 12)
               ],
             ),
           ),
