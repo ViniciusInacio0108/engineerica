@@ -9,17 +9,22 @@ class SearchTasksWidget extends StatelessWidget {
 
   void _onSearchDone(BuildContext context) {
     FocusScope.of(context).unfocus();
-    context.read<TaskBloc>().add(
-          SearchTaskEvent(value: searchController.text.trim()),
-        );
+    if (searchController.text.isNotEmpty) {
+      context.read<TaskBloc>().add(
+            SearchTaskEvent(value: searchController.text.trim()),
+          );
+    }
   }
 
   void _onExcludeSearchPressed(BuildContext context) {
     FocusScope.of(context).unfocus();
-    searchController.clear();
-    context.read<TaskBloc>().add(
-          FetchTaskEvent(currentPage: 1),
-        );
+
+    if (searchController.text.isNotEmpty) {
+      searchController.clear();
+      context.read<TaskBloc>().add(
+            FetchTaskEvent(currentPage: 1),
+          );
+    }
   }
 
   @override
