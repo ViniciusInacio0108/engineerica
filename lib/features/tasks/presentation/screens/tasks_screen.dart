@@ -3,6 +3,10 @@ import 'package:engineerica_app/features/tasks/domain/entities/task.dart';
 import 'package:engineerica_app/features/tasks/presentation/bloc/task_bloc.dart';
 import 'package:engineerica_app/features/tasks/presentation/bloc/task_events.dart';
 import 'package:engineerica_app/features/tasks/presentation/bloc/task_states.dart';
+import 'package:engineerica_app/features/tasks/presentation/widgets/filter_tasks_per_status_segment_buttons_widget.dart';
+import 'package:engineerica_app/features/tasks/presentation/widgets/search_tasks_widget.dart';
+import 'package:engineerica_app/features/tasks/presentation/widgets/task_sorting_and_page_counter_widget.dart';
+import 'package:engineerica_app/features/tasks/presentation/widgets/tasks_page_selector_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -23,21 +27,55 @@ class _TaskListView extends StatefulWidget {
 }
 
 class _TaskListViewState extends State<_TaskListView> {
-  final _searchController = TextEditingController();
+  late final TextEditingController _searchController;
 
-  void _onSearchDone() {
-    FocusScope.of(context).unfocus();
-    context.read<TaskBloc>().add(
-          SearchTaskEvent(value: _searchController.text.trim()),
-        );
+  void _onClickAddTaskButton(TaskBloc blocTask) {
+    blocTask.add(FilterTaskEvent(filter: TaskCompletionFilter.ALL));
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    Navigator.pushNamed(context, MyRoutes.FORM_TASK_SCREEN);
   }
 
-  void _onExcludeSearchPressed() {
-    FocusScope.of(context).unfocus();
-    _searchController.clear();
-    context.read<TaskBloc>().add(
-          FetchTaskEvent(currentPage: 1),
-        );
+  Future<void> _onTapTaskItem(TaskEntity currentTask) async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    await Navigator.pushNamed(
+      context,
+      MyRoutes.FORM_TASK_SCREEN,
+      arguments: currentTask,
+    );
+  }
+
+  Future<void> _onTapCheckboxTaskItem(
+      TaskBloc blocTask, TaskEntity currentTask) async {
+    blocTask.add(
+      ChangeTaskStatusEvent(
+        task: currentTask,
+      ),
+    );
+  }
+
+  Future<void> _onPressedDeleteButton(
+      TaskBloc blocTask, TaskEntity currentTask) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete task?'),
+        content: const Text('Are you sure you want to delete this task?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (ok == true) {
+      blocTask.add(
+        RemoveTaskEvent(task: currentTask),
+      );
+    }
   }
 
   @override
@@ -47,7 +85,14 @@ class _TaskListViewState extends State<_TaskListView> {
             FetchTaskEvent(currentPage: 1),
           ),
     );
+    _searchController = TextEditingController();
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -67,7 +112,6 @@ class _TaskListViewState extends State<_TaskListView> {
           ScaffoldMessenger.of(context).showSnackBar(snackBar);
         }
       }, builder: (context, state) {
-        final taskCounter = state.tasks.length;
         final list = state.tasks;
 
         return SafeArea(
@@ -75,101 +119,13 @@ class _TaskListViewState extends State<_TaskListView> {
             padding: const EdgeInsets.only(top: 24, left: 24, right: 24),
             child: Column(
               children: [
-                TextFormField(
-                  controller: _searchController,
-                  autofocus: false,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search),
-                    hintText: 'Search tasks...',
-                    suffix: InkWell(
-                      onTap: () => _onExcludeSearchPressed(),
-                      child: const Icon(
-                        Icons.close,
-                      ),
-                    ),
-                  ),
-                  textInputAction: TextInputAction.done,
-                  maxLines: 1,
-                  maxLength: 20,
-                  onEditingComplete: _onSearchDone,
+                SearchTasksWidget(
+                  searchController: _searchController,
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12.0),
-                  child: SegmentedButton<TaskCompletionFilter>(
-                    showSelectedIcon: false,
-                    segments: const <ButtonSegment<TaskCompletionFilter>>[
-                      ButtonSegment<TaskCompletionFilter>(
-                        value: TaskCompletionFilter.ALL,
-                        label: Text('All'),
-                      ),
-                      ButtonSegment<TaskCompletionFilter>(
-                        value: TaskCompletionFilter.COMPLETE,
-                        label: Text('Complete'),
-                      ),
-                      ButtonSegment<TaskCompletionFilter>(
-                        value: TaskCompletionFilter.INCOMPLETE,
-                        label: Text(
-                          'Incomplete',
-                          maxLines: 1,
-                        ),
-                      ),
-                    ],
-                    selected: <TaskCompletionFilter>{state.filter},
-                    onSelectionChanged:
-                        (Set<TaskCompletionFilter> newSelection) {
-                      _searchController.clear();
-                      blocTask.add(FilterTaskEvent(
-                        filter: newSelection.first,
-                      ));
-                    },
-                  ),
+                FilterTasksPerStatusSegmentButtonsWidget(
+                  searchController: _searchController,
                 ),
-                if (state.tasks.isEmpty)
-                  const SizedBox.shrink()
-                else
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'You have $taskCounter task(s)',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      MenuAnchor(
-                        builder: (context, controller, _) {
-                          return FilledButton.tonalIcon(
-                            onPressed: () {
-                              controller.isOpen
-                                  ? controller.close()
-                                  : controller.open();
-                            },
-                            icon: const Icon(Icons.sort),
-                            label: Text(state.sorting.name),
-                          );
-                        },
-                        menuChildren: TaskSorting.values.map((option) {
-                          return MenuItemButton(
-                            onPressed: () => blocTask.add(
-                              SortTaskEvent(sort: option),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(option.name),
-                                if (option == state.sorting)
-                                  Icon(Icons.check,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ),
+                const TaskSortingAndPageCounterWidget(),
                 if (state is LoadingTaskState)
                   const Expanded(
                     child: Center(
@@ -182,7 +138,7 @@ class _TaskListViewState extends State<_TaskListView> {
                   )
                 else if (state is FetchErrorTaskState)
                   const Expanded(
-                    child: Center(child: Text('Error Fethcing')),
+                    child: Center(child: Text('Error Fetching')),
                   )
                 else if (list.isEmpty)
                   const Expanded(
@@ -198,14 +154,7 @@ class _TaskListViewState extends State<_TaskListView> {
                         final isTaskCompleted =
                             currentTask.status == TaskStatus.COMPLETE;
                         return InkWell(
-                          onTap: () async {
-                            FocusManager.instance.primaryFocus?.unfocus();
-                            await Navigator.pushNamed(
-                              context,
-                              MyRoutes.FORM_TASK_SCREEN,
-                              arguments: currentTask,
-                            );
-                          },
+                          onTap: () async => await _onTapTaskItem(currentTask),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 4),
                             child: AnimatedContainer(
@@ -218,14 +167,11 @@ class _TaskListViewState extends State<_TaskListView> {
                               ),
                               child: ListTile(
                                 leading: Checkbox(
-                                    value: isTaskCompleted,
-                                    onChanged: (_) async {
-                                      blocTask.add(
-                                        ChangeTaskStatusEvent(
-                                          task: currentTask,
-                                        ),
-                                      );
-                                    }),
+                                  value: isTaskCompleted,
+                                  onChanged: (value) async =>
+                                      await _onTapCheckboxTaskItem(
+                                          blocTask, currentTask),
+                                ),
                                 title: Text(currentTask.name,
                                     style: TextStyle(
                                         decoration: isTaskCompleted
@@ -235,31 +181,9 @@ class _TaskListViewState extends State<_TaskListView> {
                                     ? Text(currentTask.description)
                                     : null,
                                 trailing: IconButton(
-                                  onPressed: () async {
-                                    final ok = await showDialog<bool>(
-                                      context: context,
-                                      builder: (_) => AlertDialog(
-                                        title: const Text('Delete task?'),
-                                        content: const Text(
-                                            'Are you sure you want to delete this task?'),
-                                        actions: [
-                                          TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context, false),
-                                              child: const Text('Cancel')),
-                                          TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context, true),
-                                              child: const Text('Delete')),
-                                        ],
-                                      ),
-                                    );
-                                    if (ok == true) {
-                                      blocTask.add(
-                                        RemoveTaskEvent(task: currentTask),
-                                      );
-                                    }
-                                  },
+                                  onPressed: () async =>
+                                      await _onPressedDeleteButton(
+                                          blocTask, currentTask),
                                   icon: Icon(
                                     Icons.delete,
                                     color: Theme.of(context).colorScheme.error,
@@ -272,37 +196,11 @@ class _TaskListViewState extends State<_TaskListView> {
                       },
                     ),
                   ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        blocTask.add(
-                          PreviousPageListEvent(),
-                        );
-                      },
-                      icon: const Icon(Icons.navigate_before),
-                    ),
-                    Text('Page ${blocTask.state.currentPage}'),
-                    IconButton(
-                      onPressed: () {
-                        blocTask.add(
-                          NextPageListEvent(),
-                        );
-                      },
-                      icon: const Icon(Icons.navigate_next),
-                    ),
-                  ],
-                ),
+                const TasksPageSelectorWidget(),
                 ElevatedButton(
-                    onPressed: () {
-                      blocTask.add(
-                          FilterTaskEvent(filter: TaskCompletionFilter.ALL));
-
-                      FocusManager.instance.primaryFocus?.unfocus();
-                      Navigator.pushNamed(context, MyRoutes.FORM_TASK_SCREEN);
-                    },
-                    child: const Text('Add task')),
+                  onPressed: () => _onClickAddTaskButton(blocTask),
+                  child: const Text('Add task'),
+                ),
               ],
             ),
           ),
