@@ -85,6 +85,7 @@ class _FormTasksScreenState extends State<FormTasksScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.task == null ? 'Add Task' : 'Edit Task'),
+        centerTitle: true,
         actions: [IconButton(onPressed: _save, icon: const Icon(Icons.check))],
       ),
       body: Padding(

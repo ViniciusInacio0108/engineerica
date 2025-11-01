@@ -102,6 +102,7 @@ class _TaskListViewState extends State<_TaskListView> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Tasks'),
+        centerTitle: true,
       ),
       body: BlocConsumer<TaskBloc, TaskState>(listener: (context, state) {
         if (state is ErrorWhileChangingTaskStatus) {
