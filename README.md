@@ -129,3 +129,9 @@ Our Application need the following dependencies:
 ### 1. In Memory filtering and sorting
 
 For this project we are using **Hive** and it has **limitations for been NoSQL DB and a simpler solution**. Because of that, we can't do complex queries and such needed to be done in memory. ***This is a problem because is not scalable and affects performance**. The solution would be to use a **better SQL DB such as SQFlite or a backend**.
+
+### 2. List data strcuture for task and not Map
+
+We are currently handling the tasks list with a **List data structure from Dart**, which is used for **index access of elements and this is not a scalable solution for huge sets of data**. As we have features that delete, add and edit this elements, **a better performance solution would be to use Map**. Because List has poor performance if we need to check item by item looking for the one that is going to be deleted or maybe edited. **With Map we could access via a key value which would be the Id of that element**. 
+
+PS: This problem would **only** be applied if we have **longer lists of tasks and a giant list database**.
