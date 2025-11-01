@@ -116,7 +116,10 @@ class _TaskListViewState extends State<_TaskListView> {
 
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.only(top: 24, left: 24, right: 24),
+            padding: const EdgeInsets.only(
+              left: 24,
+              right: 24,
+            ),
             child: Column(
               children: [
                 SearchTasksWidget(
@@ -199,6 +202,9 @@ class _TaskListViewState extends State<_TaskListView> {
                 const TasksPageSelectorWidget(),
                 ElevatedButton(
                   onPressed: () => _onClickAddTaskButton(blocTask),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 45),
+                  ),
                   child: const Text('Add task'),
                 ),
               ],
